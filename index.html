@@ -746,6 +746,10 @@ async function readSettings(){
     setLight("Esc","warn",(RWVER===null)?"factory firmware — limited settings":"pre-2.0 Rockwolf firmware — limited settings");
     log("Pre-2.0 ESC: the supported settings can be written; the greyed ones cannot, and those bytes are never sent. Update to "+PRO_FIRMWARE_NAME+" to unlock them.","w");
   }else{
+    /* Explicitly, not by default: a Rockwolf unit must never inherit the previous unit's
+       greys or the pre-2.0 write hold. */
+    greysClear();
+    $("btnWrite").disabled=false;
     setLight("Esc","ok","Rockwolf v"+RWVER+" — read/write");
   }
   const rev=`${settings[OFF.MAIN_REV]}.${settings[OFF.SUB_REV]}`;
@@ -891,8 +895,19 @@ function sameSettings(a,b){
 function labelId(fieldId){return "v"+fieldId.charAt(0).toUpperCase()+fieldId.slice(1);}
 function greyField(id,reason){
   const el=$(id); if(!el)return;
+  /* EVERY side effect is recorded on the element, so greysClear() can undo all of it.
+     This is not bookkeeping for its own sake: the greys used to be one-way, so greying a
+     factory ESC left the page greyed for the NEXT ESC you connected - a v60 unit came up
+     with 11 controls disabled and placeholder em-dashes, and calling greysClear() in the
+     console cleared nothing because it skipped anything still flagged data-greyed. */
+  if(!el.dataset.greyed){
+    el.dataset.greyed="1";
+    el.dataset.wasDisabled=el.disabled?"1":"0";
+    el.dataset.wasValue=(el.value===undefined?"":String(el.value));
+    el.dataset.wasPlaceholder=(el.placeholder===undefined?"":String(el.placeholder));
+    const l0=$(labelId(id)); el.dataset.wasLabel=l0?(l0.textContent||""):"";
+  }
   el.disabled=true;
-  el.dataset.greyed="1";
   /* Never display a decoded number for a byte that is not a setting. On the rev-1 layout
      CTT rendered "6.25 A" from 0x0E = 50 = the ASCII "2" of FD6288_PA2, and Min Duty and
      Throttle Ramp rendered slider clamps - confident numbers that are not this ESC's
@@ -909,8 +924,20 @@ function greyField(id,reason){
   host.appendChild(n);
 }
 function greysClear(){
+  /* Fully reverse greyField(): note, disabled, value, placeholder, label. The previous
+     version re-enabled ONLY elements that had never been greyed, so a second connect
+     inherited the first one's greys. */
   document.querySelectorAll(".greyNote").forEach(n=>n.remove());
-  document.querySelectorAll("input,select").forEach(el=>{ if(!el.dataset.greyed) el.disabled=false; });
+  document.querySelectorAll("[data-greyed='1']").forEach(el=>{
+    el.disabled=(el.dataset.wasDisabled==="1");
+    if(el.dataset.wasValue!==undefined)el.value=el.dataset.wasValue;
+    if(el.dataset.wasPlaceholder!==undefined)el.placeholder=el.dataset.wasPlaceholder;
+    delete el.dataset.greyed; delete el.dataset.wasDisabled; delete el.dataset.wasValue;
+    delete el.dataset.wasPlaceholder; delete el.dataset.wasLabel;
+  });
+  /* labels follow the restored values, and the pre-2.0 write hold must not outlive the unit */
+  try{refreshLabels();}catch(e){}
+  try{const wb=$("btnWrite"); if(wb){wb.title="";}}catch(e){}
 }
 async function writeSettings(){
   if(RO.pre20&&!PRE20_ENCODINGS_VERIFIED){
