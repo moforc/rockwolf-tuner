@@ -730,7 +730,7 @@ async function readSettings(){
      is greyed even though its bytes are inside the window, because this firmware reads
      the pack through the wrong pin (a fake ~5 V), so a cutoff set here would likely cut
      power immediately and permanently. */
-  greysClear();
+  try{greysClear();}catch(e){log("Note: could not reset the field greys ("+e.message+") - continuing.","w");}
   if(RO.pre20){
     ["ramp","minDuty","lvcAbs","torque","motorType"].forEach(id=>greyField(id,
       "on this layout those bytes are the firmware\u2019s name string \u2014 writing them would rename the ESC"));
@@ -935,7 +935,7 @@ function greysClear(){
     /* the label is restored from its saved text FIRST: refreshLabels() recomputes the
        labels it knows, but it does not manage the two selects (motorType, lvcMode), and
        those kept an em-dash forever without this. */
-    const l=$(labelId(id));
+    const l=$(labelId(el.id));
     if(l&&el.dataset.wasLabel!==undefined)l.textContent=el.dataset.wasLabel;
     delete el.dataset.greyed; delete el.dataset.wasDisabled; delete el.dataset.wasValue;
     delete el.dataset.wasPlaceholder; delete el.dataset.wasLabel;
