@@ -141,7 +141,10 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
 <div class="card hidden" id="cardPresets">
   <h2>Motor Presets</h2>
   <div class="row">
-    <div class="field"><label>Pole Count</label>
+    <div class="field" id="fPresetMotor" hidden><label>Motor</label>
+      <select id="presetMotor"></select>
+    </div>
+    <div class="field" id="fPresetPoles"><label>Pole Count</label>
       <select id="presetPoles">
         <option value="12">12 Pole</option>
         <option value="14">14 Pole</option>
@@ -152,7 +155,7 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
     </div>
     <button id="btnApplyPreset" class="ghost" style="align-self:flex-end">Apply Preset</button>
   </div>
-  <div class="note">Pick your motor and hit Apply — sets poles and KV below so the speed math matches. Then Write Settings.</div>
+  <div class="note">Pick your motor, then its KV, and hit Apply — sets poles and KV below so the speed math matches. A motor sold in a single KV shows that value with nothing to choose. Then Write Settings.</div>
 </div>
 
 <div class="card hidden" id="cardSettings">
@@ -1068,7 +1071,46 @@ function refreshLabels(){
   document.querySelectorAll("[data-greyed='1']").forEach(el=>{const l=$(labelId(el.id));if(l)l.textContent="\u2014";});
 }
 document.querySelectorAll("input[type=range]").forEach(r=>r.addEventListener("input",refreshLabels));
+/* MOTOR PRESETS (2026-09-17). Shape: motor -> {poles, kvs:[...]}.
+   The FIRST dropdown is the motor, the SECOND is the KV, and the KV list holds that motor's
+   options only. A motor that comes in one KV shows that value and offers nothing to choose
+   (the select is disabled with its single option still visible).
+   DATA PENDING: the motor chart has not been supplied yet, so this table is empty and the
+   motor picker stays hidden - the poles/KV controls below behave exactly as they always
+   have. Filling this one table is the entire change. Values are NOT guessed: wrong poles
+   mis-commutate a motor, so the numbers have to come from the chart. */
+const MOTOR_PRESETS=[];   // e.g. {motor:"SMP",poles:14,kvs:[3400]}
 const PRESET_KVS={"12":[1900,2200,2550,2800,3200,3500,4100],"14":[1700,2550,3400]};
+
+function currentMotorPreset(){
+  return MOTOR_PRESETS.find(m=>m.motor===$("presetMotor").value)||null;
+}
+function fillPresetKvFromMotor(){
+  const m=currentMotorPreset(); if(!m)return;
+  const kvSel=$("presetKv"); kvSel.innerHTML="";
+  for(const kv of m.kvs){
+    const o=document.createElement("option"); o.value=kv; o.textContent=kv+" KV"; kvSel.appendChild(o);
+  }
+  /* one KV means nothing to select: show it, do not pretend it is a choice */
+  kvSel.disabled=(m.kvs.length<=1);
+  kvSel.title=(m.kvs.length<=1)?"This motor comes in one KV only":"";
+  set("poles",m.poles); $("presetPoles").value=String(m.poles);
+  refreshLabels();markDirty();
+}
+function fillMotorPresets(){
+  const mSel=$("presetMotor");
+  if(!MOTOR_PRESETS.length)return;                 // nothing to offer: leave the tool as it was
+  $("fPresetMotor").hidden=false;
+  $("presetPoles").disabled=true;                  // pole count is a property of the motor
+  $("fPresetPoles").querySelector("label").textContent="Pole Count (from motor)";
+  mSel.innerHTML="";
+  for(const m of MOTOR_PRESETS){
+    const o=document.createElement("option"); o.value=m.motor; o.textContent=m.motor; mSel.appendChild(o);
+  }
+  fillPresetKvFromMotor();
+}
+fillMotorPresets();
+$("presetMotor").addEventListener("change",fillPresetKvFromMotor);
 function fillPresetKv(){
   const sel=$("presetKv");sel.innerHTML="";
   for(const kv of PRESET_KVS[$("presetPoles").value]){
@@ -1078,9 +1120,11 @@ function fillPresetKv(){
 $("presetPoles").addEventListener("change",fillPresetKv);
 fillPresetKv();
 $("btnApplyPreset").addEventListener("click",()=>{
-  set("poles",$("presetPoles").value);set("kv",$("presetKv").value);
+  const m=currentMotorPreset();
+  const poles=m?m.poles:$("presetPoles").value;
+  set("poles",poles);set("kv",$("presetKv").value);
   refreshLabels();markDirty();
-  log("Preset applied: "+$("presetPoles").value+"P "+$("presetKv").value+"KV — hit Write Settings.");
+  log("Preset applied: "+(m?m.motor+" — ":"")+poles+"P "+$("presetKv").value+"KV — hit Write Settings.","g");
 });
 $("btnConnect").addEventListener("click",connect);
 $("btnDisconnect").addEventListener("click",disconnect);
