@@ -1,0 +1,4 @@
+{
+  "note": "Rockwolf firmware builds for the public tuner. Empty until the Rockwolf 2.0 Combo and Legacy images pass the pre-publish gate; they must land with the download chips enabled.",
+  "builds": []
+}
