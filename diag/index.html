@@ -130,7 +130,7 @@ const KNOWN_BUILDS={
   "cdc09122ec33a7c09ad33b3fca31288fd8ba89e55325517bbabfb1a1bb873373":"ROCKWOLF v37-trace (boot-failure trace build, 2026-09-14)",
   "33fdb6a39024f403f4c09d0bdd2c118ff1b71c7f76a4cdc7f2f3ee8c06e6c593":"ROCKWOLF v37-slim (boot-failure trace, serial telemetry removed — smallest buildable tool firmware)",
   "d0623fd67bcd37155303d7cf8346d07068907ffed459729dd011eaf331b158dd":"ROCKWOLF v35 (arming-diagnostic build)",
-  "3879949904bf577557369415cbc64a08ba93b0e3ed30f98b425fda76a573390d":"STOCK upstream AM32 2.20 FD6288_F051 (no Rockwolf work)",
+  "3879949904bf577557369415cbc64a08ba93b0e3ed30f98b425fda76a573390d":"FACTORY upstream AM32 2.20 FD6288_F051 (no Rockwolf work)",
   "c78c27d2453bdcb82d95dd994d551533316b3b246d111ed19ebc8c69a327728e":"Original shipped ROCKWOLF 2.20 build",
   "9c4df75b219855d6ef7218da3318061a9aa391d1fe8f53624dd28e82ef3f445f":"Generic AM32 brushed 1.98 (Mofo_Brushed original)",
   "6d271742455cdcbdfb5d34d75ce01d307c5002961b06f7c6bff201eee1ce9549":"Third-party \"voodoo\" 2201 build (no source)"};
@@ -363,7 +363,7 @@ async function connect(){
     const rwVer=rw?rw[1]:null;
     $("pillFw").textContent="fw: "+(fwName||"unknown");
     $("pillFw").classList.remove("hidden");
-    log((rwVer?`Firmware: ${fwName} — Rockwolf v${rwVer}`:`Firmware: ${fwName||"(no name found)"} — no Rockwolf tag (stock AM32, or v7 or older)`),"g");
+    log((rwVer?`Firmware: ${fwName} — Rockwolf v${rwVer}`:`Firmware: ${fwName||"(no name found)"} — no Rockwolf tag (factory AM32, or v7 or older)`),"g");
     capture={meta:{tool:"RockwolfDiag",toolVersion:1,capturedAt:new Date().toISOString(),transport:t.mode,usbVid:t.info?t.info.usbVendorId:null,usbPid:t.info?t.info.usbProductId:null},handshake:{pinCode,blProtocol:blProto},nameRaw:Array.from(nameBytes),name:fwName,rwVersion:rwVer?parseInt(rwVer,10):null};
     $("cardCap").classList.remove("hidden");
   }catch(e){log("Connect failed: "+e.message,"e");await disconnect();}
@@ -517,9 +517,9 @@ function decodeSettings(s){
   add("Min duty cycle (0x06)",f(s[0x06]),old?NA_NAME:(s[0x06]===0xFF?"—":(s[0x06]/2).toFixed(1)+"%"),old?"":"0.5% units");
   add("Throttle ramp (0x05)",f(s[0x05]),old?NA_NAME:(s[0x05]===0xFF?"—":(s[0x05]/10).toFixed(1)+" %/ms"),old?"":"0.1 %/ms units; 160 = 16 %/ms baseline");
   add("CTT — Crawl Torque Target (0x0E)",f(s[0x0E]),old?NA_NAME:((s[0x0E]===0xFF||s[0x0E]>250)?"OFF (unregulated)":(s[0x0E]*0.05).toFixed(2)+" A"),old?"":"0.05 A units; practical band 0.5–2 A");
-  add("Stall boost (0xB6)",f(s[0xB6]),old?NA_PRE:(s[0xB6]===0xFF?"—":((s[0xB6]<=10?s[0xB6]:5))+" / 10"),old?"":"0 = off; stock 5");
-  add("Stall response (0xB7)",f(s[0xB7]),old?NA_PRE:(s[0xB7]===0xFF?"—":((s[0xB7]>=1&&s[0xB7]<=10)?s[0xB7]:1)+" / 10"),old?"":"stallPid.Kp; stock 1");
-  add("Trap cap multiplier (0xB8)",f(s[0xB8]),old?NA_PRE:(s[0xB8]===0xFF?"—":((s[0xB8]>=15&&s[0xB8]<=40)?s[0xB8]:24)/10+"×"),old?"":"0.1× units; stock 2.4×; effective trap cap = CTT × this");
+  add("Stall boost (0xB6)",f(s[0xB6]),old?NA_PRE:(s[0xB6]===0xFF?"—":((s[0xB6]<=10?s[0xB6]:5))+" / 10"),old?"":"0 = off; factory default 5");
+  add("Stall response (0xB7)",f(s[0xB7]),old?NA_PRE:(s[0xB7]===0xFF?"—":((s[0xB7]>=1&&s[0xB7]<=10)?s[0xB7]:1)+" / 10"),old?"":"stallPid.Kp; factory default 1");
+  add("Trap cap multiplier (0xB8)",f(s[0xB8]),old?NA_PRE:(s[0xB8]===0xFF?"—":((s[0xB8]>=15&&s[0xB8]<=40)?s[0xB8]:24)/10+"×"),old?"":"0.1× units; factory default 2.4×; effective trap cap = CTT × this");
   add("Trap start speed (0xB9)",f(s[0xB9]),old?NA_PRE:(s[0xB9]===0xFF?"—":(s[0xB9]<=10?s[0xB9]-5:0)),old?"":"+ hotter / − gentler sine→trap handoff");
   return rows;
 }

@@ -272,10 +272,10 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
   <div class="blOnly">
   <div class="grp">Advanced</div>
   <div class="grid">
-    <div class="field"><label>Timing Advance <b id="vTiming"></b></label><input type="range" id="timing" min="0" max="12.5" step="0.5">
-      <details class="help"><summary><span class="hint">Leave at 0 for crawling.</span> <span class="more"></span></summary><div class="hbody">Fires the motor slightly early. Costs heat and low-speed smoothness, the two things a crawler needs most.</div></details></div>
-    <div class="field"><label>Trap Start Speed <b id="vTrapStart"></b></label><input type="range" id="trapStart" min="-5" max="5" step="1">
-      <details class="help"><summary><span class="hint">How abruptly smooth hands off to fast.</span> <span class="more"></span></summary><div class="hbody">Plus makes the handover hotter, minus makes it gentler. 0 is stock.</div></details></div>
+    <div class="field"><label>High-Speed Timing <b id="vTiming"></b></label><input type="range" id="timing" min="0" max="30" step="0.9375">
+      <details class="help"><summary><span class="hint">Firing point once it leaves smooth mode.</span> <span class="more"></span></summary><div class="hbody">Does nothing during smooth crawl &mdash; only the fast half. Positive buys top speed at the cost of heat and low-speed manners. Called Timing Advance on other ESCs. 0 is default.</div></details></div>
+    <div class="field"><label>Handoff Speed <b id="vTrapStart"></b></label><input type="range" id="trapStart" min="-5" max="5" step="1">
+      <details class="help"><summary><span class="hint">When it switches from smooth to fast.</span> <span class="more"></span></summary><div class="hbody">If the motor speed jumps as it comes out of smooth mode, go negative. If it bogs or stalls at the switch, go positive. 0 is default.</div></details></div>
   </div>
   </div>
 
@@ -284,7 +284,7 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
     <button id="btnRead" class="ghost">Re-read</button>
     <button id="btnBaseline" class="ghost">Rockwolf Baseline</button>
     <button id="btnJingle" class="ghost">&#127925; Rockwolf Howl boot tune</button>
-    <button id="btnStockBeep" class="ghost">Stock boot beeps</button>
+    <button id="btnFactoryBeep" class="ghost">Factory boot beeps</button>
     <button id="btnSaveSetup" class="ghost">Save Setup</button>
     <button id="btnLoadSetup" class="ghost">Load Setup</button>
     <input type="file" id="setupFile" accept=".rwsetup,.json" class="hidden">
@@ -414,6 +414,30 @@ const FACTORY_TOOL_URL="https://moforc.com/REPLACE-WITH-CONFIG-TOOL";  // the co
 const APPLE_MSG="Apple does not allow a web page to reach a USB device — not in Safari, not in Chrome, not in any browser on iPhone or iPad. Please use a Windows PC, a Mac, a Chromebook, or an Android phone.";
 const BROWSER_MSG="This needs Chrome or Edge. Safari and Firefox cannot talk to the programmer.";
 const RO={pre20:false}; let RWVER=null, ENV=null;
+/* HIGH-SPEED TIMING (byte 0x17, eeprom `advance_level`) - read from the firmware, not guessed.
+   The byte is offset-based in 0.9375-degree units (60/64 of a commutation interval), and the
+   firmware itself defines what it accepts (Src/main.c, the boot migration):
+     raw 0-3    = the LEGACY format: level*7.5 degrees (raw 0 = 0.00, 1 = 7.5, 2 = 15, 3 = 22.5)
+     raw 4-9    = INVALID: temp_advance is forced to 16 (2.25 degrees) - never write here
+     raw 10-42  = the current format: (raw-10)*0.9375 degrees, so 0.00 up to +30.00
+     raw 43+    = INVALID, also forced to 16 - the firmware's own ceiling is raw 42
+   There is NO negative range, on any layout: raw<10 is legacy or invalid, never negative, and
+   `advance = (commutation_interval * temp_advance) >> 6` is unsigned arithmetic (Src/main.c:1201
+   and :2072, both trapezoidal). The control's floor is 0.00 degrees everywhere.
+   The offset is DERIVED from the computed layout rev - rev-1 has no offset (its captured 0x00
+   reads 0.00 degrees), rev-4 does - never from a second hand-kept list. */
+const TIMING_STEP=0.9375, TIMING_MAX_DEG=30;      // raw 42 is the firmware's own limit
+function timingOffset(){return RO.pre20?0:10;}
+function timingRawOf(deg){const off=timingOffset();   // the floor is 0.00 DEGREES on this layout,
+  // which is raw 10 on rev-4 and raw 0 on rev-1 - never raw 0 on rev-4, which is legacy territory.
+  return Math.max(off,Math.min(42,off+Math.round((+deg||0)/TIMING_STEP)));}
+function timingDegOf(deg){return Math.max(0,Math.min(TIMING_MAX_DEG,(+deg||0)));}
+/* what the ESC is holding -> degrees on the slider (legacy and invalid forms handled explicitly) */
+function timingDecode(raw){
+  if(raw>=10&&raw<=42)return (raw-10)*TIMING_STEP;
+  if(raw<=3)return raw*7.5;
+  return 0;                                        // 4-9: the firmware ignores it; show the floor
+}
 const PRO_FIRMWARE_NAME="Rockwolf 2.0";
 /* Factory (pre-2.0) layout: bytes 0x05-0x10 hold the firmware NAME string, and the
    settings block only matches ours from 0x11 - independently confirmed from the factory
@@ -717,7 +741,7 @@ setLight("Esc","bad","not answering");
     $("pillFw").textContent="fw: "+(fwName||"unknown");
     $("pillFw").classList.remove("hidden");
     if(rwVer){log("Firmware: "+fwName+" \u2014 Rockwolf v"+rwVer,"g");}
-    else{log("Firmware: "+(fwName||"(no name found)")+" \u2014 no Rockwolf tag (stock AM32, or Rockwolf v7 or older)");}
+    else{log("Firmware: "+(fwName||"(no name found)")+" \u2014 no Rockwolf tag (factory AM32, or Rockwolf v7 or older)");}
     await readSettings();
     $("cardPresets").classList.remove("hidden");
     $("cardSettings").classList.remove("hidden");
@@ -746,7 +770,7 @@ async function readSettings(){
   if(pre20Hi!==PRE20_WRITE_HI)log("eeprom rev "+settings[OFF.LAYOUT_REV]+": the write window stops at 0x2A on this layout (0x2B onward is not verified against the AM32 rev-1 field map).","w");
   const fresh=settings[0]!==0x01;
   /* FAIL-CLOSED (2026-09-17): writes are permitted only on a positive Rockwolf
-     identification. Anything else - factory 1.99, brushed 1.98, stock 2.18/2.19,
+     identification. Anything else - factory 1.99, brushed 1.98, factory 2.18/2.19,
      an unknown build - is read-only. On the pre-2.0 layout bytes 0x05-0x10 are
      the firmware's own name string, so decoding them as settings is meaningless
      and writing them would destroy it. */
@@ -832,19 +856,17 @@ function uiFromSettings(){
   const s=settings;
   set("sinePower",s[OFF.SINE_POWER]||5); set("sineRange",clamp(s[OFF.SINE_RANGE]||25,5,100));
   set("startup",clamp(s[OFF.STARTUP]||100,50,150));
-  // timing: firmware stores new format (10-42, 0.9375deg units); slider is
-  // degrees 0-12.5 in 0.5 steps, snapped to the nearest representable value
-  {const tv=s[OFF.TIMING]??0;
-   const deg=(tv>=10&&tv<=42)?((tv-10)*0.9375):((tv<=3)?tv*7.5:0);
-   set("timing",clamp(Math.round(deg*2)/2,0,12.5));}
+  // High-Speed Timing: 0.00 to +30.00 degrees, in exact 0.9375-degree steps, so what the
+  // slider shows is exactly what byte 0x17 will hold. Legacy/invalid bytes decode explicitly.
+  set("timing",timingDecode((s[OFF.TIMING]===undefined||s[OFF.TIMING]===0xFF)?timingOffset():s[OFF.TIMING]).toFixed(4));
   set("brake",clamp(s[OFF.BRAKE_STR]||10,1,10)); set("runBrake",clamp(s[OFF.RUN_BRAKE]||10,1,10));
   set("kv",clamp((s[OFF.KV]||80)*20+20,20,5000)); set("poles",clamp(s[OFF.POLES]||12,2,36)); // v26: 20KV units
   if(!RO.pre20)set("torque",(s[OFF.RW_SINE_AMPS]>250)?0:s[OFF.RW_SINE_AMPS]); // v11: 0.05A units, cap 12.5A; 0xFF fresh eeprom = off
   if(!RO.pre20)set("ramp",(s[OFF.MAX_RAMP]>=1&&s[OFF.MAX_RAMP]<=200)?s[OFF.MAX_RAMP]:160); // fw default 160
   if(!RO.pre20)set("minDuty",(s[OFF.MIN_DUTY]<=50)?s[OFF.MIN_DUTY]:1); // fw default 1
-  set("stallBoost",(s[0xB6]<=10)?s[0xB6]:5); // v28: byte 182, stock 5
-  set("stallResp",(s[0xB7]>=1&&s[0xB7]<=10)?s[0xB7]:1); // v28: byte 183, stock 1
-  set("trapMult",(s[0xB8]>=15&&s[0xB8]<=40)?s[0xB8]:24); // v29: byte 184, stock 2.4x
+  set("stallBoost",(s[0xB6]<=10)?s[0xB6]:5); // v28: byte 182, factory default 5
+  set("stallResp",(s[0xB7]>=1&&s[0xB7]<=10)?s[0xB7]:1); // v28: byte 183, factory default 1
+  set("trapMult",(s[0xB8]>=15&&s[0xB8]<=40)?s[0xB8]:24); // v29: byte 184, factory default 2.4x
   set("trapStart",(s[0xB9]<=10)?s[0xB9]-5:0); // v30: byte 185, stored 0-10 = -5..+5
   $("lvcMode").value=String((s[OFF.LVC]<=2)?s[OFF.LVC]:0);
   set("lvcCell",clamp((s[OFF.LVC_THR]<=100)?s[OFF.LVC_THR]:80,0,100)); // 80 = 3.30V/cell
@@ -862,7 +884,7 @@ function settingsFromUi(){
   s[OFF.BOOT_BYTE]=0x01;
   s[OFF.SINE_POWER]=+$("sinePower").value; s[OFF.SINE_RANGE]=+$("sineRange").value;
   s[OFF.STARTUP]=+$("startup").value;
-  s[OFF.TIMING]=10+Math.round((+$("timing").value)/0.9375); // degrees -> new-format units (0.9375deg each)
+  s[OFF.TIMING]=timingRawOf($("timing").value); // never below 0.00 degrees, never above raw 42
   s[OFF.BRAKE_STR]=+$("brake").value; s[OFF.RUN_BRAKE]=+$("runBrake").value;
   s[OFF.KV]=kvRaw($("kv").value); s[OFF.POLES]=+$("poles").value;   // floor: never write a KV above what was asked // v26: 20KV units
   s[OFF.RW_SINE_AMPS]=+$("torque").value; // v6 closed-loop torque target
@@ -1075,12 +1097,12 @@ function refreshLabels(){
   $("vSinePower").textContent=$("sinePower").value+" / 10";
   $("vSineRange").textContent=(+$("sineRange").value>=100)?"FULL SINE":($("sineRange").value+"% of stick");
   $("vStartup").textContent=$("startup").value+"%";
-  $("vTiming").textContent=$("timing").value+"°";
+  $("vTiming").textContent=(+$("timing").value).toFixed(2)+"°"+(RO.pre20?" (rev-1 scale)":"");
   $("vBrake").textContent=$("brake").value+" / 10";
   $("vRunBrake").textContent=$("runBrake").value+" / 10";
   $("vTorque").textContent=(+$("torque").value===0)?"OFF":($("torque").value*0.05).toFixed(2)+" A (trap cap "+($("torque").value*0.05*$("trapMult").value/10).toFixed(1)+" A)";
   $("vTrapMult").textContent=($("trapMult").value/10).toFixed(1)+"\u00d7";
-  $("vTrapStart").textContent=(+$("trapStart").value===0)?"0 (stock)":((+$("trapStart").value>0?"+":"")+$("trapStart").value);
+  $("vTrapStart").textContent=(+$("trapStart").value===0)?"0 (default)":((+$("trapStart").value>0?"+":"")+$("trapStart").value);
   $("vMinDuty").textContent=($("minDuty").value/2).toFixed(1)+"%";
   $("vRamp").textContent=($("ramp").value/10).toFixed(1)+" %/ms";
   $("vStallBoost").textContent=(+$("stallBoost").value===0)?"OFF":$("stallBoost").value+" / 10";
@@ -1282,11 +1304,11 @@ $("btnJingle").addEventListener("click",()=>{
   markDirty();
   log("Rockwolf Howl boot tune loaded \u2014 hit Write Settings, then power cycle to hear it.","g");
 });
-$("btnStockBeep").addEventListener("click",()=>{
+$("btnFactoryBeep").addEventListener("click",()=>{
   if(!settings){log("Connect and read settings first","w");return;}
   for(let i=0x30;i<=0xAF;i++)settings[i]=0xFF;
   markDirty();
-  log("Boot sound reverted to stock beeps \u2014 hit Write Settings.","g");
+  log("Boot sound reverted to the factory beeps \u2014 hit Write Settings.","g");
 });
 /* ---- customer downloads: THREE entries, labelled by MOTOR TYPE (2026-09-17) ----
    The old behaviour listed every .hex the proxy serves, which showed customers builds
