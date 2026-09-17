@@ -60,6 +60,7 @@ details.help .more{color:var(--accent2);white-space:nowrap;margin-left:3px;}
 details.help .more::after{content:"\2026 see more";}
 details.help[open] .more::after{content:"\2026 less";}
 details.help .hbody{font-size:11.5px;color:var(--dim);line-height:1.45;margin-top:3px;}
+.cbhelp{flex:1;min-width:230px;display:flex;flex-direction:column;gap:5px;}
 button.helpbtn{font-size:12px;padding:6px 12px;}
 .confirmbox{display:none;margin-top:12px;padding:12px;border:1px solid var(--warn);border-radius:9px;font-size:13.5px;}
 .hidden{display:none!important;}
@@ -173,6 +174,12 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
 </div>
 
 <div class="card hidden" id="cardSettings">
+  <!-- HELP COPY. ONE-LINE BUDGET: 40 CHARACTERS.
+       Measured on the live page (2026-09-17): the settings grid gives each column 267-305 px, help
+       font 11.5 px, ~5.1 px per character -> ~52 characters per line. The "..." see more affordance
+       shares that line and costs ~11, which leaves 40. Desktop is the tight case: the grid collapses
+       to a single column at phone width, which only loosens it. A longer one-liner wraps and pushes
+       the affordance onto its own line. Count the visible text, not the markup. -->
   <h2>Crawl Tuning</h2>
 
   <div class="grp">Motor</div>
@@ -182,66 +189,67 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
         <option value="brushless">Brushless Mode</option>
         <option value="brushed">Brushed Mode</option>
       </select>
-      <details class="help"><summary><span class="hint">Which kind of motor is plugged in.</span> <span class="more"></span></summary><div class="hbody">Switches the whole drive engine &mdash; no reflash needed.</div></details>
+      <details class="help"><summary><span class="hint">Pick the motor you actually have.</span> <span class="more"></span></summary><div class="hbody">Brushless has three wires, brushed has two. Getting this wrong means the motor won't run. Change it, write settings, then unplug the battery and plug it back in.</div></details>
     </div>
     <div class="field blOnly"><label>Motor KV <b id="vKv"></b></label><input type="range" id="kv" min="20" max="5000" step="20">
-      <details class="help"><summary><span class="hint">Match the number on your motor's label.</span> <span class="more"></span></summary><div class="hbody">Keeps the speed math honest.</div></details></div>
+      <details class="help"><summary><span class="hint">Type the KV printed on your motor.</span> <span class="more"></span></summary><div class="hbody">It feeds the ESC's motor speed calculation. A wrong number won't damage anything, but it throws that calculation off, and settings that depend on motor speed won't behave as expected.</div></details></div>
     <div class="field blOnly"><label>Motor Poles <b id="vPoles"></b></label><input type="range" id="poles" min="2" max="36" step="2">
-      <details class="help"><summary><span class="hint">From your motor's spec sheet (12 or 14 for most micro outrunners).</span> <span class="more"></span></summary><div class="hbody">Wrong poles = wrong speeds.</div></details></div>
+      <details class="help"><summary><span class="hint">Type your motor's pole count.</span> <span class="more"></span></summary><div class="hbody">Most of our can motors are 12. Our pancake motors (SMP, MVP, ROP, Powderkeg) are 14. A wrong number throws off the motor speed calculation.</div></details></div>
   </div>
-  <div class="row" style="margin-top:10px">
-    <div class="check"><input type="checkbox" id="bidir"><label for="bidir">Forward/Reverse (3D)</label></div>
-    <div class="check"><input type="checkbox" id="revDir"><label for="revDir">Reverse rotation</label></div>
+  <div class="row" style="margin-top:10px;align-items:flex-start">
+    <div class="cbhelp"><div class="check"><input type="checkbox" id="bidir"><label for="bidir">Forward/Reverse (3D)</label></div>
+      <details class="help"><summary><span class="hint">Leave ON for a crawler.</span> <span class="more"></span></summary><div class="hbody">Centre stick stops, push forward to go, pull back to reverse. Off is for racing setups that only go one way.</div></details></div>
+    <div class="cbhelp"><div class="check"><input type="checkbox" id="revDir"><label for="revDir">Reverse rotation</label></div>
+      <details class="help"><summary><span class="hint">Flip if the truck drives backwards.</span> <span class="more"></span></summary><div class="hbody">Some motors mount the other way round. Easier than swapping wires.</div></details></div>
   </div>
-  <details class="help" style="margin-top:4px"><summary><span class="hint">Forward/Reverse: center stick = stopped, push/pull to drive &mdash; required for crawler radios.</span> <span class="more"></span></summary><div class="hbody">Reverse rotation: flip if your rig drives backwards.</div></details>
 
   <div class="grp">Crawl Drive</div>
   <div class="grid">
     <div class="field blOnly"><label>Sine Coverage <b id="vSineRange"></b></label><input type="range" id="sineRange" min="5" max="100" step="1">
-      <details class="help"><summary><span class="hint">How much of the trigger is smooth crawl drive.</span> <span class="more"></span></summary><div class="hbody">Past this point it switches to normal high-speed mode. 100% = never switches.</div></details></div>
+      <details class="help"><summary><span class="hint">Where smooth ends and fast begins.</span> <span class="more"></span></summary><div class="hbody">Below this point the motor is silky for technical lines. Above it, it's normal quick drive. 30% suits most crawling. Higher = smooth further up the trigger, but a lower top-speed feel.</div></details></div>
     <div class="field blOnly"><label>Sine Mode Power <b id="vSinePower"></b></label><input type="range" id="sinePower" min="1" max="10" step="1">
-      <details class="help"><summary><span class="hint">Raw strength ceiling of the crawl drive.</span> <span class="more"></span></summary><div class="hbody">With Crawl Torque set, leave at 10 and let the torque setting do the managing.</div></details></div>
+      <details class="help"><summary><span class="hint">Muscle available in smooth mode.</span> <span class="more"></span></summary><div class="hbody">Leave at 10 unless you're chasing something specific. If you've set a Crawl Torque number, leave this alone and let that do the work.</div></details></div>
     <div class="field"><label>Crawl Torque Target <b id="vTorque"></b></label><input type="range" id="torque" min="0" max="250" step="1">
-      <details class="help"><summary><span class="hint">How hard the motor pulls, in real amps &mdash; held steady through binds, speed changes and battery sag.</span> <span class="more"></span></summary><div class="hbody">In brushed mode this drives the torque assist. 0 = unregulated.</div></details></div>
+      <details class="help"><summary><span class="hint">How hard it pulls, and keeps pulling.</span> <span class="more"></span></summary><div class="hbody">Set in real amps. It holds through binds, ledges and a sagging battery instead of bogging. 0 turns it off.</div></details></div>
     <div class="field"><label>Trap Cap Multiplier <b id="vTrapMult"></b></label><input type="range" id="trapMult" min="15" max="40" step="5">
-      <details class="help"><summary><span class="hint">Full-throttle current allowance as a multiple of Crawl Torque.</span> <span class="more"></span></summary><div class="hbody">Low = tame sprint zone; high = big top-end headroom.</div></details></div>
+      <details class="help"><summary><span class="hint">Extra pull allowed at full trigger.</span> <span class="more"></span></summary><div class="hbody">A multiple of your Crawl Torque number. Low keeps the sprint tame; high gives big top-end punch.</div></details></div>
     <div class="field"><label><span id="lblStartup">Startup Power</span> <b id="vStartup"></b></label><input type="range" id="startup" min="50" max="150" step="1">
-      <details class="help"><summary><span class="hint">Extra kick to break the motor loose from a dead stop.</span> <span class="more"></span></summary><div class="hbody">In brushed mode this powers the kickstart pulse.</div></details></div>
+      <details class="help"><summary><span class="hint">The kick that gets it moving.</span> <span class="more"></span></summary><div class="hbody">Too low and it hesitates off the line. Too high and it lurches.</div></details></div>
     <div class="field"><label>Min Duty Cycle <b id="vMinDuty"></b></label><input type="range" id="minDuty" min="0" max="50" step="1">
-      <details class="help"><summary><span class="hint">Smallest power ever sent to a turning motor.</span> <span class="more"></span></summary><div class="hbody">Nudge up if there's a dead zone right off idle.</div></details></div>
+      <details class="help"><summary><span class="hint">Raise if there's a dead spot off idle.</span> <span class="more"></span></summary><div class="hbody">The smallest amount of power that ever reaches a turning motor. Small changes go a long way.</div></details></div>
     <div class="field"><label>Throttle Ramp Rate <b id="vRamp"></b></label><input type="range" id="ramp" min="1" max="200" step="1">
-      <details class="help"><summary><span class="hint">How fast power is allowed to rise when you squeeze.</span> <span class="more"></span></summary><div class="hbody">Lower = softer, more progressive trigger. Works in both motor modes.</div></details></div>
+      <details class="help"><summary><span class="hint">Lower = gentler trigger.</span> <span class="more"></span></summary><div class="hbody">How fast power is allowed to climb when you squeeze. Lower numbers make a twitchy truck much easier to place.</div></details></div>
   </div>
   <div class="row blOnly" style="margin-top:10px">
     <div class="check"><input type="checkbox" id="sineOn"><label for="sineOn">Sinusoidal startup</label></div>
   </div>
-  <div class="desc blOnly" style="margin-top:4px">The smooth low-speed drive itself &mdash; the heart of the Rockwolf feel. Leave on.</div>
+  <details class="help"><summary><span class="hint">Leave ON. This is the smooth crawl.</span> <span class="more"></span></summary><div class="hbody">This is the heart of the Rockwolf feel. Turning it off gives you an ordinary ESC.</div></details>
 
   <div class="blOnly">
   <div class="grp">Stall Recovery</div>
   <div class="grid">
     <div class="field"><label>Stall Boost <b id="vStallBoost"></b></label><input type="range" id="stallBoost" min="0" max="10" step="1">
-      <div class="desc">How much extra push gets added when the motor starts bogging down. 0 = off.</div></div>
+      <details class="help"><summary><span class="hint">Extra shove when it starts to bog.</span> <span class="more"></span></summary><div class="hbody">0 is off. Turn it up if you're stopping on climbs.</div></details></div>
     <div class="field"><label>Stall Response <b id="vStallResp"></b></label><input type="range" id="stallResp" min="1" max="10" step="1">
-      <details class="help"><summary><span class="hint">How quickly that extra push arrives when a wheel bites.</span> <span class="more"></span></summary><div class="hbody">High values can lurch when it breaks free.</div></details></div>
+      <details class="help"><summary><span class="hint">How fast that shove arrives.</span> <span class="more"></span></summary><div class="hbody">Low is patient and smooth. High grabs fast, but can lurch when the tyre suddenly grips.</div></details></div>
   </div>
   <div class="row" style="margin-top:10px">
     <div class="check"><input type="checkbox" id="stall"><label for="stall">Stall protection</label></div>
   </div>
-  <div class="desc" style="margin-top:4px">Master switch for the boost system above.</div>
+  <details class="help"><summary><span class="hint">Master switch for the two below.</span> <span class="more"></span></summary><div class="hbody">Off means no extra help when the truck bogs down.</div></details>
   </div>
 
   <div class="grp">Braking</div>
   <div class="grid">
     <div class="field"><label>Drag Brake Strength <b id="vBrake"></b></label><input type="range" id="brake" min="1" max="10" step="1">
-      <div class="desc">How hard the motor grips once the rig has stopped. 10 = locked on hills.</div></div>
+      <details class="help"><summary><span class="hint">How hard it holds when you let go.</span> <span class="more"></span></summary><div class="hbody">10 is locked solid. Lower lets it creep, which some drivers prefer on off-camber.</div></details></div>
     <div class="field blOnly"><label>Running Brake <b id="vRunBrake"></b></label><input type="range" id="runBrake" min="1" max="10" step="1">
-      <details class="help"><summary><span class="hint">Engine-brake feel while moving.</span> <span class="more"></span></summary><div class="hbody">Higher = more hold-back when you let off; lower = freer coasting.</div></details></div>
+      <details class="help"><summary><span class="hint">Engine braking as you ease off.</span> <span class="more"></span></summary><div class="hbody">Higher slows you sooner when you ease off. Lower coasts more freely.</div></details></div>
   </div>
   <div class="row" style="margin-top:10px">
     <div class="check"><input type="checkbox" id="brakeStop"><label for="brakeStop">Brake on stop</label></div>
   </div>
-  <div class="desc" style="margin-top:4px">Master switch for drag brake when the trigger is released.</div>
+  <details class="help"><summary><span class="hint">Leave ON so it holds on hills.</span> <span class="more"></span></summary><div class="hbody">With it off, you'll roll backwards every time you let go.</div></details>
 
   <div class="grp">Battery</div>
   <div class="grid">
@@ -251,10 +259,12 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
         <option value="1">Per cell</option>
         <option value="2">Whole pack</option>
       </select>
-      <details class="help"><summary><span class="hint">Cuts motor power when the battery runs low (steering stays alive).</span> <span class="more"></span></summary><div class="hbody">Trips after ~10s below the threshold; power cycle to reset.</div></details>
+      <details class="help"><summary><span class="hint">Stops you running the pack flat.</span> <span class="more"></span></summary><div class="hbody">Cuts motor power when the pack gets low; steering keeps working so you can drive it back. 3.30 V per cell is the usual safe number. It trips about 10 seconds below the threshold; power cycle to reset.</div></details>
     </div>
     <div class="field" id="fLvcCell"><label>Cell Cutoff <b id="vLvcCell"></b></label><input type="range" id="lvcCell" min="0" max="100" step="5">
-      <details class="help"><summary><span class="hint">Per-cell trip voltage &mdash; cell count is detected automatically.</span> <span class="more"></span></summary><div class="hbody">3.0V is the classic LiPo floor; 3.3V leaves a safety margin.</div></details></div>
+      <!-- No one-liner was supplied for Cell Cutoff or Pack Cutoff, so their EXISTING sentence is cut at
+           its first period to hold the 40-character budget. Send the real copy and swap it in. -->
+      <details class="help"><summary><span class="hint">Per-cell trip voltage.</span> <span class="more"></span></summary><div class="hbody">Cell count is detected automatically. 3.0V is the classic LiPo floor; 3.3V leaves a safety margin.</div></details></div>
     <div class="field" id="fLvcAbs"><label>Pack Cutoff <b id="vLvcAbs"></b></label><input type="range" id="lvcAbs" min="6" max="38" step="1">
       <details class="help"><summary><span class="hint">Whole-pack trip voltage.</span> <span class="more"></span></summary><div class="hbody">For 5S&ndash;6S use this mode (not per-cell) &mdash; e.g. 18.0V for a 6S floor. 19V is the sensor's ceiling.</div></details></div>
   </div>
@@ -263,9 +273,9 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
   <div class="grp">Advanced</div>
   <div class="grid">
     <div class="field"><label>Timing Advance <b id="vTiming"></b></label><input type="range" id="timing" min="0" max="12.5" step="0.5">
-      <details class="help"><summary><span class="hint">Fires the motor slightly early for extra top-end speed.</span> <span class="more"></span></summary><div class="hbody">Costs heat and low-speed smoothness &mdash; crawlers should leave this at 0&deg;.</div></details></div>
+      <details class="help"><summary><span class="hint">Leave at 0 for crawling.</span> <span class="more"></span></summary><div class="hbody">Fires the motor slightly early. Costs heat and low-speed smoothness, the two things a crawler needs most.</div></details></div>
     <div class="field"><label>Trap Start Speed <b id="vTrapStart"></b></label><input type="range" id="trapStart" min="-5" max="5" step="1">
-      <details class="help"><summary><span class="hint">Motor speed at the moment it exits sine mode into high-speed mode.</span> <span class="more"></span></summary><div class="hbody">+ hands off hotter, &minus; hands off gentler. 0 = stock.</div></details></div>
+      <details class="help"><summary><span class="hint">How abruptly smooth hands off to fast.</span> <span class="more"></span></summary><div class="hbody">Plus makes the handover hotter, minus makes it gentler. 0 is stock.</div></details></div>
   </div>
   </div>
 
