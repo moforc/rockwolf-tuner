@@ -255,7 +255,7 @@ async function openTransport(){
     /* 2026-09-17b: same fresh-object retry as the tuner — see the note there. */
     let lastErr=null;
     /* v-next: a port can stay held for a moment after the page that owned it is torn
-       down (a tab closed, or a tool frame unloaded when the harness switches view).
+       down (a tab closed, or a frame unloaded when its host page switches view).
        One 400 ms retry was not enough to outlast that; escalate the wait instead. */
     const openBackoff=[400,1500,3000];
     for(let attempt=1;attempt<=4;attempt++){
@@ -972,12 +972,12 @@ else{
    hold the port and make the next Connect look like a broken tool (2026-09-17) */
 addEventListener("pagehide",()=>{try{if(reader)reader.cancel();}catch(e){}try{if(writer)writer.releaseLock();}catch(e){}try{if(port&&(port.readable||port.writable))port.close();}catch(e){}});
 
-/* 2026-09-17: the harness unloads this frame when the operator switches tabs. Tearing a
+/* 2026-09-17: the host page can unload this frame when the operator switches tabs. Tearing a
    frame down while the programmer is still open can leave Chrome holding the port at the
    BROWSER-PROCESS level - such a lock survives a page reload and is invisible to every
    other origin, so no amount of reloading or permission-clearing frees it and every later
    open() fails with "Failed to open serial port". Release cooperatively first, and let the
-   harness unload us only after we are clear. */
+   host page unload us only after we are clear. */
 addEventListener("message",async ev=>{
   if(!ev.data||ev.data.mofo!=="release-port")return;
   try{if(reader){await reader.cancel();reader.releaseLock();reader=null;}}catch(e){}
