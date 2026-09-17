@@ -840,7 +840,7 @@ function settingsFromUi(){
   s[OFF.STARTUP]=+$("startup").value;
   s[OFF.TIMING]=10+Math.round((+$("timing").value)/0.9375); // degrees -> new-format units (0.9375deg each)
   s[OFF.BRAKE_STR]=+$("brake").value; s[OFF.RUN_BRAKE]=+$("runBrake").value;
-  s[OFF.KV]=Math.round((+$("kv").value-20)/20); s[OFF.POLES]=+$("poles").value; // v26: 20KV units
+  s[OFF.KV]=kvRaw($("kv").value); s[OFF.POLES]=+$("poles").value;   // floor: never write a KV above what was asked // v26: 20KV units
   s[OFF.RW_SINE_AMPS]=+$("torque").value; // v6 closed-loop torque target
   s[OFF.MAX_RAMP]=+$("ramp").value; s[OFF.MIN_DUTY]=+$("minDuty").value;
   s[0xB6]=+$("stallBoost").value; s[0xB7]=+$("stallResp").value; // v28 stall tuning
@@ -1071,7 +1071,8 @@ function refreshLabels(){
   document.querySelectorAll("[data-greyed='1']").forEach(el=>{const l=$(labelId(el.id));if(l)l.textContent="\u2014";});
 }
 document.querySelectorAll("input[type=range]").forEach(r=>r.addEventListener("input",refreshLabels));
-/* MOTOR PRESETS (2026-09-17). Shape: motor -> {poles, kvs:[...]}.
+/* MOTOR PRESETS (2026-09-17). Shape: motor -> {poles, kvs:[...]}, filled from the motor chart
+   (operator, 2026-09-17): Can-style outrunners are 12 pole / 9 slot, pancakes are 14 pole / 12 slot.
    The FIRST dropdown is the motor, the SECOND is the KV, and the KV list holds that motor's
    options only. A motor that comes in one KV shows that value and offers nothing to choose
    (the select is disabled with its single option still visible).
@@ -1079,23 +1080,47 @@ document.querySelectorAll("input[type=range]").forEach(r=>r.addEventListener("in
    motor picker stays hidden - the poles/KV controls below behave exactly as they always
    have. Filling this one table is the entire change. Values are NOT guessed: wrong poles
    mis-commutate a motor, so the numbers have to come from the chart. */
-const MOTOR_PRESETS=[];   // e.g. {motor:"SMP",poles:14,kvs:[3400]}
+const MOTOR_PRESETS=[
+  /* Can-style outrunners - 12 pole, 9 slot */
+  {motor:"NanoBAM",    poles:12, slots:9,  kvs:[1900,3200,3500]},
+  {motor:"NanoBAM XL", poles:12, slots:9,  kvs:[1900,3200]},
+  {motor:"NanoBeast",  poles:12, slots:9,  kvs:[3200]},
+  {motor:"BAM",        poles:12, slots:9,  kvs:[1900,2200,4100]},
+  {motor:"Shogun",     poles:12, slots:9,  kvs:[2800]},
+  {motor:"Valkyrie",   poles:12, slots:9,  kvs:[2550]},
+  /* Pancake motors - 14 pole, 12 slot */
+  {motor:"SMP",        poles:14, slots:12, kvs:[1700]},
+  {motor:"MVP",        poles:14, slots:12, kvs:[2550]},
+  {motor:"ROP",        poles:14, slots:12, kvs:[3400]},
+  {motor:"Powderkeg",  poles:14, slots:12, kvs:[2800]},
+];
+/* The ESC keeps KV in ONE byte of 20 KV steps: motor_kv = (raw * 20) + 20 (Src/main.c).
+   A chart value that does not land on a step (2550 -> raw 126.5) is stored at the step BELOW,
+   never above: a low KV is the safe direction. The picker says what the ESC will really hold,
+   so nothing is written silently. */
+function kvRaw(kv){return Math.max(0,Math.min(255,Math.floor((+kv-20)/20)));}
+function kvStorable(kv){return kvRaw(kv)*20+20;}
 const PRESET_KVS={"12":[1900,2200,2550,2800,3200,3500,4100],"14":[1700,2550,3400]};
 
 function currentMotorPreset(){
   return MOTOR_PRESETS.find(m=>m.motor===$("presetMotor").value)||null;
 }
-function fillPresetKvFromMotor(){
+function fillPresetKvFromMotor(touch){
   const m=currentMotorPreset(); if(!m)return;
   const kvSel=$("presetKv"); kvSel.innerHTML="";
   for(const kv of m.kvs){
-    const o=document.createElement("option"); o.value=kv; o.textContent=kv+" KV"; kvSel.appendChild(o);
+    const stored=kvStorable(kv);
+    const o=document.createElement("option"); o.value=kv;
+    o.textContent=kv+" KV"+(stored!==kv?" (ESC holds "+stored+")":"");
+    if(stored!==kv)o.title="KV is stored in 20 KV steps, so "+kv+" sits at "+stored+" — rounded DOWN, never up.";
+    kvSel.appendChild(o);
   }
   /* one KV means nothing to select: show it, do not pretend it is a choice */
   kvSel.disabled=(m.kvs.length<=1);
   kvSel.title=(m.kvs.length<=1)?"This motor comes in one KV only":"";
-  set("poles",m.poles); $("presetPoles").value=String(m.poles);
-  refreshLabels();markDirty();
+  set("poles",m.poles); $("presetPoles").value=String(m.poles);   // the pole count follows the motor, live
+  refreshLabels();
+  if(touch)markDirty();                    // the fill at load is not an edit: no dirty pill on a fresh page
 }
 function fillMotorPresets(){
   const mSel=$("presetMotor");
@@ -1110,21 +1135,27 @@ function fillMotorPresets(){
   fillPresetKvFromMotor();
 }
 fillMotorPresets();
-$("presetMotor").addEventListener("change",fillPresetKvFromMotor);
-function fillPresetKv(){
+$("presetMotor").addEventListener("change",()=>fillPresetKvFromMotor(true));
+function fillPresetKv(touch){
   const sel=$("presetKv");sel.innerHTML="";
   for(const kv of PRESET_KVS[$("presetPoles").value]){
     const o=document.createElement("option");o.value=kv;o.textContent=kv+" KV";sel.appendChild(o);
   }
+  set("poles",+$("presetPoles").value);    // picking a pole-count preset sets the pole count in the tool too
+  refreshLabels();
+  if(touch)markDirty();
 }
-$("presetPoles").addEventListener("change",fillPresetKv);
-fillPresetKv();
+$("presetPoles").addEventListener("change",()=>fillPresetKv(true));
+if(!MOTOR_PRESETS.length)fillPresetKv();   // with a motor table the MOTOR owns poles and KV, and must not be overwritten
 $("btnApplyPreset").addEventListener("click",()=>{
   const m=currentMotorPreset();
   const poles=m?m.poles:$("presetPoles").value;
-  set("poles",poles);set("kv",$("presetKv").value);
+  const want=+$("presetKv").value, stored=kvStorable(want);
+  set("poles",poles);set("kv",stored);
   refreshLabels();markDirty();
-  log("Preset applied: "+(m?m.motor+" — ":"")+poles+"P "+$("presetKv").value+"KV — hit Write Settings.","g");
+  log("Preset applied: "+(m?m.motor+" — ":"")+poles+"P "+stored+"KV"+
+      (stored!==want?" (your motor is "+want+"KV; the ESC keeps KV in 20 steps and holds "+stored+", the step below)":"")+
+      " — hit Write Settings.","g");
 });
 $("btnConnect").addEventListener("click",connect);
 $("btnDisconnect").addEventListener("click",disconnect);
