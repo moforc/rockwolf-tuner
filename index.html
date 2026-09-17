@@ -48,6 +48,19 @@ select,input[type=number]{background:var(--panel2);border:1px solid var(--line);
 .grp{font-size:11.5px;color:var(--accent2);margin:18px 0 10px;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:5px;}
 .grp:first-of-type{margin-top:4px;}
 .desc{font-size:11.5px;color:var(--dim);line-height:1.4;margin-top:1px;}
+/* Collapsible help (2026-09-17). Native <details> only: no library, no line-clamp (clamping clips
+   mid-word and breaks at phone widths). The first sentence is the always-visible hint; the rest
+   sits behind "... see more". The triangle is suppressed and the whole summary is clickable. */
+details.help{margin-top:1px;}
+details.help>summary{list-style:none;cursor:pointer;font-size:11.5px;color:var(--dim);line-height:1.4;display:block;}
+details.help>summary::-webkit-details-marker{display:none;}
+details.help>summary::marker{content:"";}
+details.help>summary:hover .hint{color:#c6ccda;}
+details.help .more{color:var(--accent2);white-space:nowrap;margin-left:3px;}
+details.help .more::after{content:"\2026 see more";}
+details.help[open] .more::after{content:"\2026 less";}
+details.help .hbody{font-size:11.5px;color:var(--dim);line-height:1.45;margin-top:3px;}
+button.helpbtn{font-size:12px;padding:6px 12px;}
 .confirmbox{display:none;margin-top:12px;padding:12px;border:1px solid var(--warn);border-radius:9px;font-size:13.5px;}
 .hidden{display:none!important;}
 footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:var(--dim);}
@@ -57,6 +70,7 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
 <header>
   <div class="logo">RW</div>
   <h1>ROCKWOLF <span>32</span> TUNER</h1>
+  <button id="btnHelpAll" class="ghost helpbtn" aria-expanded="false">Show all help</button>
   <div class="proto">PROTOTYPE</div>
 </header>
 <main>
@@ -168,35 +182,35 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
         <option value="brushless">Brushless Mode</option>
         <option value="brushed">Brushed Mode</option>
       </select>
-      <div class="desc">Which kind of motor is plugged in. Switches the whole drive engine &mdash; no reflash needed.</div>
+      <details class="help"><summary><span class="hint">Which kind of motor is plugged in.</span> <span class="more"></span></summary><div class="hbody">Switches the whole drive engine &mdash; no reflash needed.</div></details>
     </div>
     <div class="field blOnly"><label>Motor KV <b id="vKv"></b></label><input type="range" id="kv" min="20" max="5000" step="20">
-      <div class="desc">Match the number on your motor's label. Keeps the speed math honest.</div></div>
+      <details class="help"><summary><span class="hint">Match the number on your motor's label.</span> <span class="more"></span></summary><div class="hbody">Keeps the speed math honest.</div></details></div>
     <div class="field blOnly"><label>Motor Poles <b id="vPoles"></b></label><input type="range" id="poles" min="2" max="36" step="2">
-      <div class="desc">From your motor's spec sheet (12 or 14 for most micro outrunners). Wrong poles = wrong speeds.</div></div>
+      <details class="help"><summary><span class="hint">From your motor's spec sheet (12 or 14 for most micro outrunners).</span> <span class="more"></span></summary><div class="hbody">Wrong poles = wrong speeds.</div></details></div>
   </div>
   <div class="row" style="margin-top:10px">
     <div class="check"><input type="checkbox" id="bidir"><label for="bidir">Forward/Reverse (3D)</label></div>
     <div class="check"><input type="checkbox" id="revDir"><label for="revDir">Reverse rotation</label></div>
   </div>
-  <div class="desc" style="margin-top:4px">Forward/Reverse: center stick = stopped, push/pull to drive &mdash; required for crawler radios. Reverse rotation: flip if your rig drives backwards.</div>
+  <details class="help" style="margin-top:4px"><summary><span class="hint">Forward/Reverse: center stick = stopped, push/pull to drive &mdash; required for crawler radios.</span> <span class="more"></span></summary><div class="hbody">Reverse rotation: flip if your rig drives backwards.</div></details>
 
   <div class="grp">Crawl Drive</div>
   <div class="grid">
     <div class="field blOnly"><label>Sine Coverage <b id="vSineRange"></b></label><input type="range" id="sineRange" min="5" max="100" step="1">
-      <div class="desc">How much of the trigger is smooth crawl drive. Past this point it switches to normal high-speed mode. 100% = never switches.</div></div>
+      <details class="help"><summary><span class="hint">How much of the trigger is smooth crawl drive.</span> <span class="more"></span></summary><div class="hbody">Past this point it switches to normal high-speed mode. 100% = never switches.</div></details></div>
     <div class="field blOnly"><label>Sine Mode Power <b id="vSinePower"></b></label><input type="range" id="sinePower" min="1" max="10" step="1">
-      <div class="desc">Raw strength ceiling of the crawl drive. With Crawl Torque set, leave at 10 and let the torque setting do the managing.</div></div>
+      <details class="help"><summary><span class="hint">Raw strength ceiling of the crawl drive.</span> <span class="more"></span></summary><div class="hbody">With Crawl Torque set, leave at 10 and let the torque setting do the managing.</div></details></div>
     <div class="field"><label>Crawl Torque Target <b id="vTorque"></b></label><input type="range" id="torque" min="0" max="250" step="1">
-      <div class="desc">How hard the motor pulls, in real amps &mdash; held steady through binds, speed changes and battery sag. In brushed mode this drives the torque assist. 0 = unregulated.</div></div>
+      <details class="help"><summary><span class="hint">How hard the motor pulls, in real amps &mdash; held steady through binds, speed changes and battery sag.</span> <span class="more"></span></summary><div class="hbody">In brushed mode this drives the torque assist. 0 = unregulated.</div></details></div>
     <div class="field"><label>Trap Cap Multiplier <b id="vTrapMult"></b></label><input type="range" id="trapMult" min="15" max="40" step="5">
-      <div class="desc">Full-throttle current allowance as a multiple of Crawl Torque. Low = tame sprint zone; high = big top-end headroom.</div></div>
+      <details class="help"><summary><span class="hint">Full-throttle current allowance as a multiple of Crawl Torque.</span> <span class="more"></span></summary><div class="hbody">Low = tame sprint zone; high = big top-end headroom.</div></details></div>
     <div class="field"><label><span id="lblStartup">Startup Power</span> <b id="vStartup"></b></label><input type="range" id="startup" min="50" max="150" step="1">
-      <div class="desc">Extra kick to break the motor loose from a dead stop. In brushed mode this powers the kickstart pulse.</div></div>
+      <details class="help"><summary><span class="hint">Extra kick to break the motor loose from a dead stop.</span> <span class="more"></span></summary><div class="hbody">In brushed mode this powers the kickstart pulse.</div></details></div>
     <div class="field"><label>Min Duty Cycle <b id="vMinDuty"></b></label><input type="range" id="minDuty" min="0" max="50" step="1">
-      <div class="desc">Smallest power ever sent to a turning motor. Nudge up if there's a dead zone right off idle.</div></div>
+      <details class="help"><summary><span class="hint">Smallest power ever sent to a turning motor.</span> <span class="more"></span></summary><div class="hbody">Nudge up if there's a dead zone right off idle.</div></details></div>
     <div class="field"><label>Throttle Ramp Rate <b id="vRamp"></b></label><input type="range" id="ramp" min="1" max="200" step="1">
-      <div class="desc">How fast power is allowed to rise when you squeeze. Lower = softer, more progressive trigger. Works in both motor modes.</div></div>
+      <details class="help"><summary><span class="hint">How fast power is allowed to rise when you squeeze.</span> <span class="more"></span></summary><div class="hbody">Lower = softer, more progressive trigger. Works in both motor modes.</div></details></div>
   </div>
   <div class="row blOnly" style="margin-top:10px">
     <div class="check"><input type="checkbox" id="sineOn"><label for="sineOn">Sinusoidal startup</label></div>
@@ -209,7 +223,7 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
     <div class="field"><label>Stall Boost <b id="vStallBoost"></b></label><input type="range" id="stallBoost" min="0" max="10" step="1">
       <div class="desc">How much extra push gets added when the motor starts bogging down. 0 = off.</div></div>
     <div class="field"><label>Stall Response <b id="vStallResp"></b></label><input type="range" id="stallResp" min="1" max="10" step="1">
-      <div class="desc">How quickly that extra push arrives when a wheel bites. High values can lurch when it breaks free.</div></div>
+      <details class="help"><summary><span class="hint">How quickly that extra push arrives when a wheel bites.</span> <span class="more"></span></summary><div class="hbody">High values can lurch when it breaks free.</div></details></div>
   </div>
   <div class="row" style="margin-top:10px">
     <div class="check"><input type="checkbox" id="stall"><label for="stall">Stall protection</label></div>
@@ -222,7 +236,7 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
     <div class="field"><label>Drag Brake Strength <b id="vBrake"></b></label><input type="range" id="brake" min="1" max="10" step="1">
       <div class="desc">How hard the motor grips once the rig has stopped. 10 = locked on hills.</div></div>
     <div class="field blOnly"><label>Running Brake <b id="vRunBrake"></b></label><input type="range" id="runBrake" min="1" max="10" step="1">
-      <div class="desc">Engine-brake feel while moving. Higher = more hold-back when you let off; lower = freer coasting.</div></div>
+      <details class="help"><summary><span class="hint">Engine-brake feel while moving.</span> <span class="more"></span></summary><div class="hbody">Higher = more hold-back when you let off; lower = freer coasting.</div></details></div>
   </div>
   <div class="row" style="margin-top:10px">
     <div class="check"><input type="checkbox" id="brakeStop"><label for="brakeStop">Brake on stop</label></div>
@@ -237,21 +251,21 @@ footer{max-width:1060px;margin:0 auto;padding:0 26px 40px;font-size:12px;color:v
         <option value="1">Per cell</option>
         <option value="2">Whole pack</option>
       </select>
-      <div class="desc">Cuts motor power when the battery runs low (steering stays alive). Trips after ~10s below the threshold; power cycle to reset.</div>
+      <details class="help"><summary><span class="hint">Cuts motor power when the battery runs low (steering stays alive).</span> <span class="more"></span></summary><div class="hbody">Trips after ~10s below the threshold; power cycle to reset.</div></details>
     </div>
     <div class="field" id="fLvcCell"><label>Cell Cutoff <b id="vLvcCell"></b></label><input type="range" id="lvcCell" min="0" max="100" step="5">
-      <div class="desc">Per-cell trip voltage &mdash; cell count is detected automatically. 3.0V is the classic LiPo floor; 3.3V leaves a safety margin.</div></div>
+      <details class="help"><summary><span class="hint">Per-cell trip voltage &mdash; cell count is detected automatically.</span> <span class="more"></span></summary><div class="hbody">3.0V is the classic LiPo floor; 3.3V leaves a safety margin.</div></details></div>
     <div class="field" id="fLvcAbs"><label>Pack Cutoff <b id="vLvcAbs"></b></label><input type="range" id="lvcAbs" min="6" max="38" step="1">
-      <div class="desc">Whole-pack trip voltage. For 5S&ndash;6S use this mode (not per-cell) &mdash; e.g. 18.0V for a 6S floor. 19V is the sensor's ceiling.</div></div>
+      <details class="help"><summary><span class="hint">Whole-pack trip voltage.</span> <span class="more"></span></summary><div class="hbody">For 5S&ndash;6S use this mode (not per-cell) &mdash; e.g. 18.0V for a 6S floor. 19V is the sensor's ceiling.</div></details></div>
   </div>
 
   <div class="blOnly">
   <div class="grp">Advanced</div>
   <div class="grid">
     <div class="field"><label>Timing Advance <b id="vTiming"></b></label><input type="range" id="timing" min="0" max="12.5" step="0.5">
-      <div class="desc">Fires the motor slightly early for extra top-end speed. Costs heat and low-speed smoothness &mdash; crawlers should leave this at 0&deg;.</div></div>
+      <details class="help"><summary><span class="hint">Fires the motor slightly early for extra top-end speed.</span> <span class="more"></span></summary><div class="hbody">Costs heat and low-speed smoothness &mdash; crawlers should leave this at 0&deg;.</div></details></div>
     <div class="field"><label>Trap Start Speed <b id="vTrapStart"></b></label><input type="range" id="trapStart" min="-5" max="5" step="1">
-      <div class="desc">Motor speed at the moment it exits sine mode into high-speed mode. + hands off hotter, &minus; hands off gentler. 0 = stock.</div></div>
+      <details class="help"><summary><span class="hint">Motor speed at the moment it exits sine mode into high-speed mode.</span> <span class="more"></span></summary><div class="hbody">+ hands off hotter, &minus; hands off gentler. 0 = stock.</div></details></div>
   </div>
   </div>
 
@@ -1101,6 +1115,27 @@ const MOTOR_PRESETS=[
 function kvRaw(kv){return Math.max(0,Math.min(255,Math.floor((+kv-20)/20)));}
 function kvStorable(kv){return kvRaw(kv)*20+20;}
 const PRESET_KVS={"12":[1900,2200,2550,2800,3200,3500,4100],"14":[1700,2550,3400]};
+
+/* ---- collapsible help (2026-09-17) ------------------------------------------------
+   Native <details> only: no library and no line-clamp (clamping clips mid-word and breaks at
+   phone widths). Each field shows its first sentence as the hint; the rest sits behind
+   "... see more", which becomes "... less" while open - CSS only, no JS per block. One header
+   toggle opens or closes them all and remembers the choice.
+   Deliberately NOT collapsible: the greyed-field reason (it explains why a control is dead)
+   and the connection failure panel. ---- */
+const HELP_KEY="rockwolf.help.open";
+function helpSet(open){
+  document.querySelectorAll("details.help").forEach(d=>{d.open=open;});
+  const b=$("btnHelpAll");
+  if(b){b.textContent=open?"Hide all help":"Show all help";b.setAttribute("aria-expanded",open?"true":"false");}
+}
+let helpOpen=false;
+try{helpOpen=localStorage.getItem(HELP_KEY)==="1";}catch(e){helpOpen=false;}   // private mode / storage blocked
+helpSet(helpOpen);
+$("btnHelpAll").addEventListener("click",()=>{
+  helpOpen=!helpOpen; helpSet(helpOpen);
+  try{localStorage.setItem(HELP_KEY,helpOpen?"1":"0");}catch(e){}
+});
 
 function currentMotorPreset(){
   return MOTOR_PRESETS.find(m=>m.motor===$("presetMotor").value)||null;
