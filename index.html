@@ -932,10 +932,15 @@ function greysClear(){
     el.disabled=(el.dataset.wasDisabled==="1");
     if(el.dataset.wasValue!==undefined)el.value=el.dataset.wasValue;
     if(el.dataset.wasPlaceholder!==undefined)el.placeholder=el.dataset.wasPlaceholder;
+    /* the label is restored from its saved text FIRST: refreshLabels() recomputes the
+       labels it knows, but it does not manage the two selects (motorType, lvcMode), and
+       those kept an em-dash forever without this. */
+    const l=$(labelId(id));
+    if(l&&el.dataset.wasLabel!==undefined)l.textContent=el.dataset.wasLabel;
     delete el.dataset.greyed; delete el.dataset.wasDisabled; delete el.dataset.wasValue;
     delete el.dataset.wasPlaceholder; delete el.dataset.wasLabel;
   });
-  /* labels follow the restored values, and the pre-2.0 write hold must not outlive the unit */
+  /* then let the decoded labels follow the restored values */
   try{refreshLabels();}catch(e){}
   try{const wb=$("btnWrite"); if(wb){wb.title="";}}catch(e){}
 }
